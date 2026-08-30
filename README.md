@@ -10,37 +10,11 @@ The provided logging suite offers a robust, crash-resilient mechanism for captur
 
 ## Architectural Design
 
-The framework employs a modified `Singleton` pattern to manage a global logging state. The architecture comprises three primary components: the central `Logger` class, a proxy `_Lazy_Logger` class, and a customized `Flushing_File_Handler`.
+The framework employs a modified `Singleton` pattern to manage a non-global logging state. The architecture comprises three primary components: the central `Logger` class, a proxy `_Lazy_Logger` class, and a customized `Flushing_File_Handler`.
 
-```mermaid
-classDiagram
-  class Logger {
-    +_loggers: dict
-    +_configured: bool
-    +_global_logger: logging.Logger
-    +configure(level_, name_)
-    +_create_logger(name_)
-    +get_logger(name_)
-    +get_global()
-    +_cleanup()
-    +flush_all()
-  }
+mermaid diagram
 
-  class _Lazy_Logger {
-    +_queue: list
-    +_real_logger: logging.Logger
-    +_get_real_logger()
-    +_log_method(method_name)
-    +__getattr__(name)
-  }
-
-  class Flushing_File_Handler {
-    +emit(record)
-  }
-
-  Logger ..> _Lazy_Logger : Returns if unconfigured
-  Logger --> Flushing_File_Handler : Optionally utilizes
-```
+![singleton-logger](./docs/art/singleton-logger.png)
 
 ## Design Logic and Theoretical Framework
 
@@ -50,7 +24,7 @@ A significant challenge in distributed or multi-module software architectures is
 
 ### Application of SOLID Principles
 
-The design aligns with several fundamental principles of object-oriented software engineering:
+The design aligns with a couple SOLID principles, which was the inspiration for writing this project after discussion with some of my students.
 
 **Single Responsibility Principle**: The `_Lazy_Logger` is strictly responsible for message queuing, while the Logger class manages file handles and configuration state.
 
@@ -60,7 +34,7 @@ The design aligns with several fundamental principles of object-oriented softwar
 
 ### Crash Resiliency
 
-The architecture prioritizes data preservation during catastrophic software failures. By registering the `_cleanup` method with the atexit module, the suite ensures that all file buffers are flushed to the disk upon normal or abnormal termination. Additionally, the `Flushing_File_Handler` forces a disk write operation after every individual log emission, neutralizing the risk of data loss from operating system buffering delays.
+`Singleton-Logger` prioritizes message preservation during runtime error. By registering the `_cleanup` method with the `atexit` module, the suite ensures that all file buffers are flushed to the disk/file upon normal or abnormal termination. Additionally, the `Flushing_File_Handler` forces a disk write operation after every individual log emission, minimizing the risk of data loss from operating system buffering delays.
 
 ### System Advantages
 
@@ -81,28 +55,66 @@ The architecture prioritizes data preservation during catastrophic software fail
 ## Implementation Guidelines
 The following code illustrates the intended usage paradigm for the suite.
 
+in `main.py`, the first logger is initialized.
+
 ```python
 import os
 import logging
-from lib.log import Logger
+import singleton_logger as Logger
+
+from .do_something import do_something
+from .do_something_else import do_something_else
 
 def main():
-  Logger.configure(level_=logging.DEBUG, name_="main_application")
+
+  Logger.configure(
+    level_ = logging.DEBUG, # integer values also available
+    name_ = "singleton_logger"
+  )
   
   log = Logger.get_logger()
-  log.info("Application initialized successfully")
+  log.info( "Application initialized successfully" )
   
   try:
-    process_data()
+    do_something()
+  
   except Exception as e:
-    log.error(f"Critical failure: {e}")
+
+    log.error( f"Critical failure: {e}" )
     Logger.flush_all()
     raise
 
-def process_data():
-  log = Logger.get_logger("data_processor")
+  do_something_else()
+```
+
+in module `do_something.py`, logger gets the singleton if a new logger is not instantiated.
+
+```python 
+import Logger
+
+def do_something():
+
+  log = Logger.get_logger("singleton_logger")
   log.debug("Processing routine started")
 ```
+
+in module `do_something_else.py`
+
+```python 
+import Logger
+
+def do_something_else():
+
+  log = Logger.get_logger("singleton_logger")
+  log.warning("Processing routine started")
+
+```
+
+## Future implementations 
+
+1. Logger streams log messages via api, email, ...
+1. Improvements module ux, specially for `Logger.configuration`
+
 
 ## References
 
