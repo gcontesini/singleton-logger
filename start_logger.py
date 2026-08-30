@@ -53,7 +53,11 @@ class Logger:
   _global_logger = None
   # ============================================================================
   @classmethod
-  def configure( cls, level_=logging.INFO, name_=f"default" ):
+  def configure(
+    cls,
+    name_ : str = "default",
+    level_ = logging.INFO,
+  ) -> None | logging.Logger:
   
     '''
     Explicitly configure the logger. Call this once at program startup.
@@ -94,11 +98,12 @@ class Logger:
     register( cls._cleanup )
 
     return cls._global_logger
+  
   # ============================================================================
   @classmethod
   def _create_logger(
     cls,
-    name_ : str,
+    name_ : str = "default",
     log_format_ : str = "%(asctime)s | %(name)s | %(funcName)s.%(lineno)d | %(levelname)s | %(message)s",
     date_format_ : str = "%Y-%m-%d %H:%M:%S",
   ) -> logging.Logger:
@@ -150,7 +155,10 @@ class Logger:
   
   # ============================================================================
   @classmethod
-  def get_logger( cls, name_=None ) -> logging.Logger:
+  def get_logger(
+    cls,
+    name_ : str = "default",
+  ) -> logging.Logger:
     
     '''
     Returns a configured logger with immediate disk flushing.
@@ -159,11 +167,10 @@ class Logger:
     '''
 
     # If asking for global or not configured logger, return global logger
-    
     if not cls._configured:
       return _Lazy_Logger( )
 
-    if not name_:
+    if name_ == "default" :
       frame = sys._getframe( 1 )
       filepath = pathlib.Path( frame.f_code.co_filename )
       name_ = filepath.stem
@@ -171,7 +178,7 @@ class Logger:
     return cls._create_logger( name_ )
   # ============================================================================
   @classmethod
-  def get_global( cls ) -> logging.Logger:
+  def get_global( cls ) -> logging.Logger | None:
     '''
     Returns the global LOG instance. Use this for the global LOG object.
     '''
