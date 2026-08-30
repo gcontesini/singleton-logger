@@ -3,10 +3,83 @@ import os
 import sys
 import logging
 import pathlib 
+import types
+import typing
 
 from atexit import register
 from datetime import datetime
-from typing import Callable
+# ==============================================================================
+class _Lazy_Logger( object ):
+  
+  '''
+  Proxy logger that queues messages until Logger.configure() is called.
+  This allows modules to create log = get_logger() at import time.
+  '''
+  
+  # ! Why standard python logging does not have this behaviour by default instead a global logger.
+  
+  # ============================================================================
+  def __init__( self ) -> None:
+    self._queue : list = []
+    self._real_logger : logging.Logger | _Lazy_Logger | None = None
+  
+  # ============================================================================
+  def _get_real_logger( self ):
+    
+    if self._real_logger is None:
+      
+      if Logger._configured:
+        
+        self._real_logger : logging.Logger | _Lazy_Logger | None = Logger.get_global( )
+      
+        for method, args, kwargs in self._queue:
+      
+          getattr( self._real_logger, method )( *args, **kwargs )
+      
+        self._queue.clear( )
+    
+    return self._real_logger
+  
+  # ============================================================================
+  def _log_method( self, method_name ) -> typing.Callable:
+  
+    def method( *args, **kwargs ):
+  
+      real : logging.Logger | None | _Lazy_Logger = self._get_real_logger( )
+      
+      if real:
+        return getattr( real, method_name )( *args, **kwargs )
+      
+      else:
+        self._queue.append( ( method_name, args, kwargs ) )
+        
+    return method
+  
+  # ============================================================================
+  def __getattr__( self, name ) -> typing.Callable:
+    
+    return self._log_method( name )
+
+# ==============================================================================
+class Flushing_File_Handler( logging.FileHandler ):
+  '''
+  A file handler that flushes after every log entry.
+  Use this for maximum crash resistance at the cost of performance.
+  Custom logging handler that auto-flushes on every write (use for critical apps)
+  '''
+  
+  def emit( self, record ) -> None:
+    
+    super( ).emit( record )
+    self.flush( )
+    
+# ==============================================================================
+def get_logger( ) -> logging.Logger | _Lazy_Logger | None:
+  '''
+  Returns the global LOG instance. Import and call this in every module.
+  '''
+  
+  return Logger.get_global( )
 # ==============================================================================
 class Logger:
   '''
@@ -46,17 +119,18 @@ class Logger:
         raise
   '''
 
-  _loggers = {}
-  _configured = False
-  _console_level = logging.DEBUG
-  _file_handler = None
-  _global_logger = None
+  _loggers : dict = {}
+  _configured : bool = False
+  _console_level : int = logging.DEBUG
+  _file_handler : logging.FileHandler | None = None
+  _global_logger : logging.Logger | None = None
   # ============================================================================
   @classmethod
   def configure(
     cls,
     name_ : str = "default",
-    level_ = logging.INFO,
+    level_ : int = logging.INFO,
+    var_log_dir_path_ : str = "./var/log/"
   ) -> None | logging.Logger:
   
     '''
@@ -67,10 +141,10 @@ class Logger:
     if cls._configured:
       return cls._global_logger
 
-    _logfile_folder = "./var/log/"
-    _logfile = f"{_logfile_folder}_{name_}_{datetime.today( ).strftime( '%Y-%m-%d_-_%H-%M-%S' )}.log"
+    _logfile_folder = var_log_dir_path_
+    _logfile_format : str = f"{_logfile_folder}_{name_}_{datetime.today( ).strftime( '%Y-%m-%d_-_%H-%M-%S' )}.log"
 
-    cls._logfile = _logfile
+    cls._logfile = _logfile_format
     cls._console_level = level_
 
     log_path = pathlib.Path( cls._logfile )
@@ -115,7 +189,7 @@ class Logger:
     if name_ in cls._loggers:
       return cls._loggers[ name_ ]
 
-    logger = logging.getLogger( name_ )
+    logger : logging.Logger = logging.getLogger( name_ )
     logger.setLevel( logging.DEBUG )
 
     logger.handlers.clear( )
@@ -158,27 +232,27 @@ class Logger:
   def get_logger(
     cls,
     name_ : str = "default",
-  ) -> logging.Logger:
+  ) -> _Lazy_Logger | logging.Logger:
     
     '''
     Returns a configured logger with immediate disk flushing.
     If not configured yet, returns the global logger which will be properly
     initialized when configure() is called.
     '''
-
     # If asking for global or not configured logger, return global logger
     if not cls._configured:
       return _Lazy_Logger( )
-
+    
+    _name : str = name_
     if name_ == "default" :
-      frame = sys._getframe( 1 )
-      filepath = pathlib.Path( frame.f_code.co_filename )
-      name_ = filepath.stem
+      _frame : types.FrameType= sys._getframe( 1 )
+      _filepath : pathlib.Path = pathlib.Path( _frame.f_code.co_filename )
+      _name = _filepath.stem
 
-    return cls._create_logger( name_ )
+    return cls._create_logger( _name )
   # ============================================================================
   @classmethod
-  def get_global( cls ) -> logging.Logger | None:
+  def get_global( cls ) -> _Lazy_Logger | logging.Logger | None:
     '''
     Returns the global LOG instance. Use this for the global LOG object.
     '''
@@ -191,8 +265,11 @@ class Logger:
   @classmethod
   def _cleanup( cls ) -> None:
     '''Ensure all handlers are properly flushed and closed.'''
+    
     for logger in cls._loggers.values( ):
+    
       for handler in logger.handlers:
+    
         handler.flush( )
         handler.close( )
         
@@ -200,68 +277,9 @@ class Logger:
   @classmethod
   def flush_all( cls ) -> None:
     '''Manually flush all log handlers. Call this before risky operations.'''
+    
     for logger in cls._loggers.values( ):
       for handler in logger.handlers:
         handler.flush( )
         
-# ==============================================================================
-class _Lazy_Logger( object ):
-  
-  '''
-  Proxy logger that queues messages until Logger.configure() is called.
-  This allows modules to create log = get_logger() at import time.
-  '''
-  
-  # ! Why standard python logging does not have this behaviour by default is a mistery!
-  
-  # ============================================================================
-  def __init__( self ):
-    self._queue = []
-    self._real_logger = None
-  
-  # ============================================================================
-  def _get_real_logger( self ) -> logging.Logger | None:
-    if self._real_logger is None:
-      if Logger._configured:
-        self._real_logger = Logger.get_global( )
-        for method, args, kwargs in self._queue:
-          getattr( self._real_logger, method )( *args, **kwargs )
-        self._queue.clear( )
-    return self._real_logger
-  
-  # ============================================================================
-  def _log_method( self, method_name ) -> Callable:
-  
-    def method( *args, **kwargs ):
-  
-      real = self._get_real_logger( )
-      if real:
-        return getattr( real, method_name )( *args, **kwargs )
-      else:
-        self._queue.append( ( method_name, args, kwargs ) )
-    return method
-  
-  # ============================================================================
-  def __getattr__( self, name ) -> Callable:
-    
-    return self._log_method( name )
-
-# ==============================================================================
-class Flushing_File_Handler( logging.FileHandler ):
-  '''
-  A file handler that flushes after every log entry.
-  Use this for maximum crash resistance at the cost of performance.
-  Custom logging handler that auto-flushes on every write (use for critical apps)
-  '''
-  
-  def emit( self, record ) -> None:
-    super( ).emit( record )
-    self.flush( )
-    
-# ==============================================================================
-def get_logger( ) -> logging.Logger:
-  '''
-  Returns the global LOG instance. Import and call this in every module.
-  '''
-  return Logger.get_global( )
 # ==============================================================================

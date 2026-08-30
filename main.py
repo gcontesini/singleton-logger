@@ -1,5 +1,5 @@
 def main():
-    print("Hello from x1-python-logger!")
+    print("Hello World!")
 
 
 if __name__ == "__main__":

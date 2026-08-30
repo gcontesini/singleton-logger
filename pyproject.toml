@@ -1,7 +1,9 @@
 [project]
-name = "x1-python-logger"
+name = "singleton-logger"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pip>=26.2.1",
+]
