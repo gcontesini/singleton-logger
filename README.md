@@ -1,16 +1,40 @@
-
-# Runtime persistante Logger
+# Run-time persistent Logger
 
 ## Overview
 
-**TLDR:** Init the logger once (`Singleton`), even across different modules.
+**TLDR:** Gives the option to initialise the logger once (`Singleton`) across different modules while preventing/denying global access.
 
-The provided logging suite offers a robust, crash-resilient mechanism for capturing software execution states. The architecture is designed to address the synchronization of log events across multiple modules avoiding repetitive formal configuration. Implemention deferred execution queue, the system ensures that early-stage initialization logs are preserved and subsequently written to disk once the primary logging configuration is exited (halted or crashed).
-**Diclaimer**: This logger does not substitute design pattern where multiple loggers are required.
+The provided logging suite offers a robust, crash-resilient mechanism for capturing software execution states. The architecture is designed to address the synchronisation of log events across multiple modules avoiding repetitive formal configuration. implementation deferred execution queue, the system ensures that early-stage initialisation logs are preserved and subsequently written to disk once the primary logging configuration is exited (halted or crashed).
+
+## Installation
+
+### Pypi
+
+1. Create your `.venv` as usual
+
+2. Add 
+  ```bash
+  pip install -i https://test.pypi.org/simple/ singleton-logger
+  ```
+
+3. Import the module normally
+
+   ```python
+   from singleton_logger import Logger
+   
+   def main() -> None:
+     log = Logger.get_logger( )
+     Logger.configure(
+       level_ = 10, #Debug
+       name_ = "main_logger"
+     )
+   
+     log.debug("Message")
+   ```
 
 ## Architectural Design
 
-The framework employs a modified `Singleton` pattern to manage a non-global logging state. The architecture comprises three primary components: the central `Logger` class, a proxy `_Lazy_Logger` class, and a customized `Flushing_File_Handler`.
+The framework employs a modified `Singleton` pattern to manage a non-global logging state. The architecture comprises three primary components: the central `Logger` class, a proxy `_Lazy_Logger` class, and a customised `Flushing_File_Handler`.
 
 mermaid diagram
 
@@ -38,11 +62,11 @@ The design aligns with a couple SOLID principles, which was the inspiration for 
 
 ### System Advantages
 
-**Initialization Safety**: Modules can safely request and utilize logger instances at import time without waiting for the primary application entry point to execute configuration parameters.
+**Initialisation Safety**: Modules can safely request and utilize logger instances at import time without waiting for the primary application entry point to execute configuration parameters.
 
-**Data Integrity**: The explicit use of the atexit registry and immediate file creation ensures that diagnostic information is captured even when unhandled exceptions occur.
+**Data Integrity**: The explicit use of the `atexit` registry and immediate file creation ensures that diagnostic information is captured even when unhandled exceptions occur.
 
-**Centralized Configuration**: All module-level loggers inherit the formatting and output destinations defined during the single configure method call. This eliminates fragmented log files.
+**Centralised Configuration**: All module-level loggers inherit the formatting and output destinations defined during the single configure method call. This eliminates fragmented log files.
 
 ### System Limitations
 
@@ -123,3 +147,13 @@ Gamma, E., Helm, R., Johnson, R., & Vlissides, J. (1994). Design patterns: eleme
 Yuan, D., Zheng, J., Park, S., Zhou, Y., & Balaraman, S. (2012). Improving software diagnosability via log enhancement. ACM Transactions on Computer Systems (TOCS), 30(1), 1-28.
 
 Fu, Q., Lou, J. G., Wang, Y., & Li, J. (2014). Execution anomaly detection in distributed systems through unstructured log analysis. In 2009 Ninth IEEE International Conference on Data Mining (pp. 149-158). IEEE.
+
+## Support
+
+If you really want to support this and other projects that I am involved, you can buy me a coffee.
+
+<img src="/home/contesini/00_keys/qr-code.png" alt="buymeacoffee" style="zoom: 25%;" />
+
+Thank you,
+
+And I hope you have a great day ahead.
