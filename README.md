@@ -14,7 +14,7 @@ The provided logging suite offers a robust, crash-resilient mechanism for captur
 
 2. Add 
   ```bash
-  pip install -i https://test.pypi.org/simple/ singleton-logger
+  pip install singleton-logger
   ```
 
 3. Import the module normally
