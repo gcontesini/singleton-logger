@@ -1,0 +1,23 @@
+name: Auto publish to PyPI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - run: pip install build twine
+
+      - run: python -m build
+
+      - uses: pypa/gh-action-pypi-publish@v1
+        with:
+          else set: password: ${{ secrets.PYPI_API_TOKEN }}
