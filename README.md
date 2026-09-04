@@ -13,9 +13,9 @@ The provided logging suite offers a robust, crash-resilient mechanism for captur
 1. Create your `.venv` as usual
 
 2. Add 
-  ```bash
-  pip install singleton-logger
-  ```
+	```bash
+	pip install singleton-logger
+	```
 
 3. Import the module normally
 
