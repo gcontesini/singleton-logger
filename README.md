@@ -36,8 +36,6 @@ The provided logging suite offers a robust, crash-resilient mechanism for captur
 
 The framework employs a modified `Singleton` pattern to manage a non-global logging state. The architecture comprises three primary components: the central `Logger` class, a proxy `_Lazy_Logger` class, and a customised `Flushing_File_Handler`.
 
-mermaid diagram
-
 ![singleton-logger](./docs/art/singleton-logger.png)
 
 ## Design Logic and Theoretical Framework
@@ -140,6 +138,12 @@ def do_something_else():
 1. Improvements module ux, specially for `Logger.configuration`
 
 
+
+## GitHub Repository
+
+[GitHub Repository](https://github.com/gcontesini/singleton-logger)
+
+
 ## References
 
 Gamma, E., Helm, R., Johnson, R., & Vlissides, J. (1994). Design patterns: elements of reusable object-oriented software. Addison-Wesley.
@@ -152,7 +156,9 @@ Fu, Q., Lou, J. G., Wang, Y., & Li, J. (2014). Execution anomaly detection in di
 
 If you really want to support this and other projects that I am involved, you can buy me a coffee.
 
-<img src="/home/contesini/00_keys/qr-code.png" alt="buymeacoffee" style="zoom: 25%;" />
+
+
+<img src="./docs/art/qr-code.png" alt="buymeacoffee" style="zoom: 25%;" />
 
 Thank you,
 
